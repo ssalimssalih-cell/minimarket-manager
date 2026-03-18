@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minimarket System</title>
+
+<!-- Web App Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Icon pour iOS (Apple) -->
+<link rel="apple-touch-icon" href="icon.png">
+
+<!-- iOS specific - plein écran -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Minimarket">
+
+<!-- Bibliothèque pour générer des PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Viewport pour mobile -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+<!-- Thème couleur -->
+<meta name="theme-color" content="#00bcd4">
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-light bg-light px-3 shadow-sm">
+  <a class="navbar-brand fw-bold"><i class="bi bi-shop"></i> Minimarket System</a>
+  <button class="btn btn-outline-primary ms-auto" id="menu-toggle">
+    <i class="bi bi-list"></i>
+  </button>
+</nav>
+
+<!-- SIDEBAR -->
+<div id="sidebar" class="sidebar">
+  <button class="close-btn btn btn-outline-danger" id="menu-close">×</button>
+  <ul class="list-unstyled mt-4">
+    <li><a href="#" id="open-pos"><i class="bi bi-cash-stack me-2"></i>POS</a></li>
+    <li><a href="#"><i class="bi bi-box-seam me-2"></i>Products</a></li>
+    <li><a href="#"><i class="bi bi-people me-2"></i>Clients</a></li>
+    <li><a href="#"><i class="bi bi-truck me-2"></i>Suppliers</a></li>
+    <li><a href="#"><i class="bi bi-cart-check me-2"></i>Sales</a></li>
+    <li><a href="#"><i class="bi bi-credit-card-2-front me-2"></i>Credits</a></li>
+    <li><a href="#"><i class="bi bi-bar-chart-line me-2"></i>Statistics</a></li>
+  </ul>
+</div>
+
+<!-- MAIN PAGE -->
+<div class="container mt-5">
+  <h1>Welcome to Minimarket System</h1>
+  <p>Use the menu to navigate through the system.</p>
+</div>
+
+<!-- ================= POS ================= -->
+<div id="pos-form" class="form-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-cash-stack"></i> POS - Sales</h2>
+    <button id="pos-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <!-- ACTIONS POUR POS -->
+  <div class="form-actions mb-3 d-flex gap-2">
+    <button id="import-sales" class="btn btn-success"><i class="bi bi-download"></i> Import ventes.json</button>
+    <button id="export-sales" class="btn btn-primary"><i class="bi bi-upload"></i> Export ventes.json</button>
+    <button id="new-sale-btn" class="btn btn-warning"><i class="bi bi-plus-circle"></i> Nouvelle vente</button>
+    <button id="show-sales-list-btn" class="btn btn-info ms-2"><i class="bi bi-list-ul"></i> Liste ventes</button>
+  </div>
+
+  <!-- FILTRES POS -->
+  <div id="pos-filters" class="mb-3">
+    <div class="row g-2">
+      <div class="col-md-4">
+        <input type="text" id="pos-search" class="form-control" placeholder="Rechercher client ou produit...">
+      </div>
+      <div class="col-md-3">
+        <select id="pos-sort-by" class="form-control">
+          <option value="date-desc">Date (plus récent)</option>
+          <option value="date-asc">Date (plus ancien)</option>
+          <option value="client-asc">Client (A-Z)</option>
+          <option value="client-desc">Client (Z-A)</option>
+          <option value="product-asc">Produit (A-Z)</option>
+          <option value="product-desc">Produit (Z-A)</option>
+          <option value="price-asc">Prix (croissant)</option>
+          <option value="price-desc">Prix (décroissant)</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <input type="date" id="pos-date-filter" class="form-control" placeholder="Filtrer par date">
+      </div>
+      <div class="col-md-2">
+        <button id="pos-reset-filters" class="btn btn-secondary w-100">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SALES LIST -->
+  <div id="pos-sales-list">
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+          <tr>
+            <th>N° Facture</th>
+            <th>Date</th>
+            <th>Client</th>
+            <th>Produits</th>
+            <th>Total</th>
+            <th>Payé</th>
+            <th>Reste</th>
+            <th>Paiement</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="pos-sales-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FORMULAIRE NOUVELLE VENTE -->
+  <div id="pos-steps" class="d-none">
+    <!-- STEP 1 CLIENT -->
+    <div id="step-client">
+      <h4>Étape 1 : Client</h4>
+      <input type="text" id="client-search-select" class="form-control mb-3" list="client-list" placeholder="Tapez pour rechercher un client...">
+      <datalist id="client-list"></datalist>
+      
+      <select id="pos-client-select" class="d-none">
+        <option value="">Sélectionnez un client</option>
+      </select>
+      
+      <button id="next-to-cart" class="btn btn-primary"><i class="bi bi-arrow-right"></i> Suivant →</button>
+    </div>
+
+    <!-- STEP 2 PRODUITS -->
+    <div id="step-cart" class="d-none">
+      <h4>Étape 2 : Produits</h4>
+      <input type="text" id="product-search" class="form-control mb-3" placeholder="Rechercher produit...">
+      
+      <div id="product-results" class="list-group mb-3" style="max-height: 200px; overflow-y: auto;"></div>
+
+      <h5>Panier</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Qty</th>
+              <th>Prix</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="pos-cart-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4">
+          <label>Remise</label>
+          <input type="number" id="discount" class="form-control" value="0" min="0">
+        </div>
+        <div class="col-md-4">
+          <h5 class="mt-4">Total : <span id="pos-total">0.00 MAD</span></h5>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <button id="back-to-client" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> ← Retour</button>
+        <button id="next-to-payment" class="btn btn-primary">Suivant → <i class="bi bi-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- STEP 3 PAIEMENT -->
+    <div id="step-payment" class="d-none">
+      <h4>Étape 3 : Paiement</h4>
+      
+      <div class="mb-3">
+        <label>Type de paiement</label>
+        <select id="payment-type" class="form-control">
+          <option value="cash">Espèce</option>
+          <option value="credit">Crédit</option>
+        </select>
+      </div>
+
+      <div id="cash-zone">
+        <label>Monnaie donnée</label>
+        <input type="number" id="cash-given" class="form-control mb-3" min="0">
+        <h5>Monnaie rendue : <span id="cash-return">0.00 MAD</span></h5>
+      </div>
+
+      <div class="mt-3">
+        <button id="back-to-cart" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> ← Retour</button>
+        <button id="save-sale" class="btn btn-success"><i class="bi bi-check-circle"></i> Enregistrer vente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PRODUCTS ================= -->
+<div id="products-form" class="form-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-box-seam"></i> Products</h2>
+    <button id="products-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <!-- ACTIONS POUR PRODUITS -->
+  <div class="form-actions mb-3 d-flex gap-2 flex-wrap">
+    <button id="import-products" class="btn btn-success"><i class="bi bi-download"></i> Import products.json</button>
+    <button id="export-products" class="btn btn-primary"><i class="bi bi-upload"></i> Export products.json</button>
+    <input type="text" id="search-products" placeholder="Search product..." class="form-control w-auto">
+    <button id="add-product-btn" class="btn btn-warning ms-auto"><i class="bi bi-plus-circle"></i> New Product</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered" id="products-table">
+      <thead class="table-dark">
+        <tr>
+          <th data-column="id">ID</th>
+          <th data-column="name">Name</th>
+          <th data-column="category">Category</th>
+          <th data-column="boxUnit">Box Unit</th>
+          <th data-column="boxPrice">Box Price</th>
+          <th data-column="priceUnit">Price Unit</th>
+          <th data-column="priceSell">Price Sell</th>
+          <th data-column="profit">Profit</th>
+          <th data-column="brand">Brand</th>
+          <th data-column="unit">Unit</th>
+          <th data-column="supplier">Supplier</th>
+          <th data-column="expiration">Expiration</th>
+          <th data-column="stock">Current Stock</th>
+          <th data-column="sold">Sold Stock</th>
+          <th data-column="description">Description</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="products-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================= CLIENTS ================= -->
+<div id="clients-form" class="form-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-people"></i> Clients</h2>
+    <button id="clients-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <div class="form-actions mb-3 d-flex gap-2">
+    <button id="import-clients" class="btn btn-success"><i class="bi bi-download"></i> Import clients.json</button>
+    <button id="export-clients" class="btn btn-primary"><i class="bi bi-upload"></i> Export clients.json</button>
+    <input type="text" id="search-clients" placeholder="Search client..." class="form-control w-auto">
+    <button id="add-client-btn" class="btn btn-warning ms-auto"><i class="bi bi-plus-circle"></i> Add Client</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered" id="clients-table">
+      <thead class="table-dark">
+        <tr>
+          <th data-column="id">ID</th>
+          <th data-column="name">Client Name</th>
+          <th data-column="address">Address</th>
+          <th data-column="phone">Phone</th>
+          <th data-column="whatsapp">WhatsApp</th>
+          <th data-column="createdAt">Created At</th>
+          <th data-column="points">Fidelity Points</th>
+          <th data-column="ca">Chiffre d'Affaire</th>
+          <th data-column="profit">Profit</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="clients-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================= SUPPLIERS ================= -->
+<div id="suppliers-form" class="form-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-truck"></i> Suppliers</h2>
+    <button id="suppliers-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <div class="form-actions mb-3 d-flex gap-2">
+    <button id="import-suppliers" class="btn btn-success"><i class="bi bi-download"></i> Import suppliers.json</button>
+    <button id="export-suppliers" class="btn btn-primary"><i class="bi bi-upload"></i> Export suppliers.json</button>
+    <input type="text" id="search-suppliers" placeholder="Search supplier..." class="form-control w-auto">
+    <button id="add-supplier-btn" class="btn btn-warning ms-auto"><i class="bi bi-plus-circle"></i> Add Supplier</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered" id="suppliers-table">
+      <thead class="table-dark">
+        <tr>
+          <th data-column="id">ID</th>
+          <th data-column="name">Supplier Name</th>
+          <th data-column="address">Address</th>
+          <th data-column="phone">Phone</th>
+          <th data-column="whatsapp">WhatsApp</th>
+          <th data-column="ca">Chiffre d'Affaire</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="suppliers-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================= SALES PAGE ================= -->
+<div id="sales-form" class="form-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-cart-check"></i> Sales History</h2>
+    <button id="sales-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <div class="form-actions mb-3 d-flex gap-2">
+    <button id="import-sales-full" class="btn btn-success"><i class="bi bi-download"></i> Import sales.json</button>
+    <button id="export-sales-full" class="btn btn-primary"><i class="bi bi-upload"></i> Export sales.json</button>
+  </div>
+
+  <!-- Filtres -->
+<div class="row mb-3">
+    <div class="col-md-2">
+        <input type="text" id="sales-client-search" class="form-control" placeholder="Rechercher client...">
+    </div>
+    <div class="col-md-2">
+        <input type="text" id="sales-product-search" class="form-control" placeholder="Rechercher produit...">
+    </div>
+    <div class="col-md-2">
+        <input type="text" id="sales-invoice-search" class="form-control" placeholder="N° Facture...">
+    </div>
+    <div class="col-md-2">
+        <input type="date" id="sales-date-filter" class="form-control">
+    </div>
+    <div class="col-md-2">
+        <select id="sales-period-filter" class="form-control">
+            <option value="all">Toutes les périodes</option>
+            <option value="today">Aujourd'hui</option>
+            <option value="3days">3 derniers jours</option>
+            <option value="1week">1 semaine</option>
+            <option value="15days">15 jours</option>
+            <option value="1month">1 mois</option>
+            <option value="3months">3 mois</option>
+            <option value="6months">6 mois</option>
+            <option value="1year">1 an</option>
+        </select>
+    </div>
+</div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered" id="sales-table">
+      <thead class="table-dark">
+        <tr>
+          <th data-column="invoiceNumber">N° Facture</th>
+          <th data-column="id">ID Vente</th>
+          <th data-column="date">Date</th>
+          <th data-column="clientId">Client ID</th>
+          <th data-column="clientName">Client Name</th>
+          <th data-column="productName">Produit</th>
+          <th data-column="qty">Quantité</th>
+          <th data-column="price">Prix vente</th>
+          <th data-column="priceUnit">Prix revient</th>
+          <th data-column="profitPerItem">Profit unitaire</th>
+          <th data-column="total">Total produit</th>
+          <th data-column="totalProfitForItem">Profit total</th>
+          <th data-column="saleTotalProfit">Profit vente</th>
+          <th data-column="montantPaye">Payé</th>
+          <th data-column="resteDu">Reste</th>
+          <th data-column="paymentType">Paiement</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="sales-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================= CREDITS ================= -->
+<div id="credits-form" class="form-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-credit-card-2-front"></i> Crédits</h2>
+    <button id="credits-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <div class="form-actions mb-3 d-flex gap-2">
+    <button id="import-credits" class="btn btn-success"><i class="bi bi-download"></i> Import credits.json</button>
+    <button id="export-credits" class="btn btn-primary"><i class="bi bi-upload"></i> Export credits.json</button>
+    <input type="text" id="search-credits" placeholder="Rechercher client ou facture..." class="form-control w-auto">
+    <button id="add-credit-btn" class="btn btn-warning ms-auto"><i class="bi bi-plus-circle"></i> Ajouter Crédit</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered" id="credits-table">
+      <thead class="table-dark">
+        <tr>
+          <th data-column="id">ID</th>
+          <th data-column="invoiceNumber">N° Facture</th>
+          <th data-column="date">Date</th>
+          <th data-column="clientId">Client ID</th>
+          <th data-column="clientName">Client Name</th>
+          <th data-column="totalVente">Total Vente</th>
+          <th data-column="montantPaye">Montant Payé</th>
+          <th data-column="amount">Reste Dû</th>
+          <th data-column="status">Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="credits-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ADD / EDIT CREDIT -->
+<div id="add-credit-form" class="add-product-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-pencil-square"></i> Ajouter / Modifier Crédit</h2>
+    <button id="add-credit-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <form id="credit-form" class="d-flex flex-column gap-3 p-3">
+    <div class="mb-3">
+      <label class="form-label">Client</label>
+      <input type="text" id="credit-client-search" class="form-control mb-2" list="credit-client-list" placeholder="Rechercher client...">
+      <datalist id="credit-client-list"></datalist>
+      <input type="hidden" id="credit-client-id">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">N° Facture</label>
+      <input type="text" id="credit-invoice" class="form-control" placeholder="Optionnel">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Total Vente (MAD)</label>
+      <input type="number" step="0.01" id="credit-total" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Montant Payé (MAD)</label>
+      <input type="number" step="0.01" id="credit-paye" class="form-control" value="0">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Reste Dû (MAD)</label>
+      <input type="number" step="0.01" id="credit-reste" class="form-control" readonly>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Statut</label>
+      <select id="credit-status" class="form-control">
+        <option value="pending">En attente</option>
+        <option value="paid">Payé</option>
+      </select>
+    </div>
+    <div class="text-center">
+      <button type="submit" class="btn btn-success px-4"><i class="bi bi-save"></i> Enregistrer Crédit</button>
+    </div>
+  </form>
+</div>
+
+<!-- ================= STATISTICS PAGE ================= -->
+<!-- ================= STATISTICS PAGE ================= -->
+
+   <!-- Graphique périodique -->
+
+<div id="statistics-form" class="form-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-bar-chart-line"></i> Statistics</h2>
+    <button id="statistics-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <!-- Filtre de période -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <label class="form-label fw-bold">Période</label>
+      <select id="stats-period-filter" class="form-control">
+        <option value="all">Toutes les périodes</option>
+        <option value="today">Aujourd'hui</option>
+        <option value="3days">3 derniers jours</option>
+        <option value="1week">1 semaine</option>
+        <option value="15days">15 jours</option>
+        <option value="1month">1 mois</option>
+        <option value="3months">3 mois</option>
+        <option value="6months">6 mois</option>
+        <option value="1year">1 an</option>
+      </select>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button id="refresh-stats" class="btn btn-primary"><i class="bi bi-arrow-repeat"></i> Actualiser</button>
+    </div>
+  </div>
+
+  <!-- Cartes principales -->
+  <div class="row">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-cart-check"></i>
+        <h5>Chiffre d'Affaire</h5>
+        <div class="number" id="stats-ca">0 MAD</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-graph-up"></i>
+        <h5>Profit Total</h5>
+        <div class="number" id="stats-profit">0 MAD</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-receipt"></i>
+        <h5>NB Factures</h5>
+        <div class="number" id="stats-invoices">0</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-box"></i>
+        <h5>Articles Vendus</h5>
+        <div class="number" id="stats-items-sold">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques Crédits -->
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <h4><i class="bi bi-credit-card"></i> Statistiques des Crédits</h4>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-check-circle text-success"></i>
+        <h5>Crédits payés</h5>
+        <div class="number" id="stats-credits-paid-count">0</div>
+        <small class="text-muted" id="stats-credits-paid-amount">0 MAD</small>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-exclamation-circle text-warning"></i>
+        <h5>Crédits impayés</h5>
+        <div class="number" id="stats-credits-unpaid-count">0</div>
+        <small class="text-muted" id="stats-credits-unpaid-amount">0 MAD</small>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-cash-stack text-success"></i>
+        <h5>Total payé (crédits)</h5>
+        <div class="number" id="stats-credits-paid-total">0 MAD</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <i class="bi bi-cash text-danger"></i>
+        <h5>Total impayé</h5>
+        <div class="number" id="stats-credits-unpaid-total">0 MAD</div>
+      </div>
+    </div>
+  </div>
+     <!-- Graphique périodique -->
+      <!-- Section Charges -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <div class="d-flex justify-content-between align-items-center">
+      <h4><i class="bi bi-cash-stack"></i> Charges</h4>
+      <button id="toggle-charges-btn" class="btn btn-primary">
+        <i class="bi bi-chevron-down"></i> Afficher les charges
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="charges-section" class="row mt-3 d-none">
+  <div class="col-md-12">
+    <!-- Actions pour les charges -->
+    <div class="form-actions mb-3 d-flex gap-2 flex-wrap">
+      <button id="import-charges" class="btn btn-success"><i class="bi bi-download"></i> Import charges.json</button>
+      <button id="export-charges" class="btn btn-primary"><i class="bi bi-upload"></i> Export charges.json</button>
+      <button id="add-charge-btn" class="btn btn-warning ms-auto"><i class="bi bi-plus-circle"></i> Ajouter une charge</button>
+    </div>
+
+    <!-- Tableau des charges -->
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered" id="charges-table">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>Nom</th>
+            <th>Catégorie</th>
+            <th>Montant</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="charges-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Total des charges -->
+    <div class="alert alert-info mt-3">
+      <strong>Total des charges :</strong> <span id="total-charges">0 MAD</span>
+    </div>
+  </div>
+</div>
+
+<!-- Formulaire Ajouter/Modifier Charge -->
+<div id="add-charge-form" class="add-product-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-pencil-square"></i> Ajouter / Modifier Charge</h2>
+    <button id="add-charge-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <form id="charge-form" class="d-flex flex-column gap-3 p-3">
+    <div class="mb-3">
+      <label class="form-label">Nom de la charge</label>
+      <input type="text" id="charge-name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Catégorie</label>
+      <input type="text" id="charge-category" class="form-control" list="charge-category-list" required>
+      <datalist id="charge-category-list">
+        <option value="Loyer">
+        <option value="Électricité">
+        <option value="Eau">
+        <option value="Internet">
+        <option value="Téléphone">
+        <option value="Salaires">
+        <option value="Fournitures">
+        <option value="Transport">
+        <option value="Maintenance">
+        <option value="Marketing">
+        <option value="Impôts">
+        <option value="Assurance">
+        <option value="Autre">
+      </datalist>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Montant (MAD)</label>
+      <input type="number" step="0.01" id="charge-amount" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Date</label>
+      <input type="date" id="charge-date" class="form-control" required>
+    </div>
+    <div class="text-center">
+      <button type="submit" class="btn btn-success px-4"><i class="bi bi-save"></i> Enregistrer</button>
+    </div>
+  </form>
+</div>
+<div class="row mt-4">
+  <div class="col-md-12">
+    <h4><i class="bi bi-graph-up"></i> Évolution</h4>
+  </div>
+  <div class="col-md-12">
+    <canvas id="stats-chart" style="width:90%; max-height:400px;"></canvas>
+  </div>
+</div>
+
+<!-- Top Clients -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <h4><i class="bi bi-trophy"></i> Top Clients</h4>
+  </div>
+  <div class="col-md-12">
+    <div id="stats-top-clients-list" class="list-group">
+      <!-- Les clients seront insérés ici par JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- Top Produits -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <h4><i class="bi bi-star"></i> Top Produits</h4>
+  </div>
+  <div class="col-md-12">
+    <div id="stats-top-products-list" class="list-group">
+      <!-- Les produits seront insérés ici par JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT PRODUCT -->
+<div id="add-product-form" class="add-product-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-pencil-square"></i> Add / Edit Product</h2>
+    <button id="add-product-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <form id="product-form" class="d-flex flex-column gap-3 p-3">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Name</label>
+        <input type="text" id="product-name" class="form-control" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Category</label>
+        <input list="category-list" id="product-category" class="form-control" required>
+        <datalist id="category-list"></datalist>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Box Unit</label>
+        <input type="number" step="0.01" id="product-box-unit" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Box Price (MAD)</label>
+        <input type="number" step="0.01" id="product-box-price" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Price Unit (MAD)</label>
+        <input type="number" step="0.01" id="product-price-unit" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Price Sell (MAD)</label>
+        <input type="number" step="0.01" id="product-price-sell" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Profit (MAD)</label>
+        <input type="text" id="product-profit" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Brand</label>
+        <input type="text" id="product-brand" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Unit</label>
+        <input type="text" id="product-unit" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Supplier</label>
+        <input list="supplier-list" id="product-supplier" class="form-control">
+        <datalist id="supplier-list"></datalist>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Expiration</label>
+        <input type="date" id="product-expiration" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Current Stock</label>
+        <input type="number" id="product-stock" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Sold Stock</label>
+        <input type="number" id="product-sold" class="form-control">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea id="product-description" class="form-control"></textarea>
+      </div>
+    </div>
+    <div class="mt-3 text-center">
+      <button type="submit" class="btn btn-success px-4"><i class="bi bi-save"></i> Save Product</button>
+    </div>
+  </form>
+</div>
+
+<!-- ADD / EDIT CLIENT -->
+<div id="add-client-form" class="add-product-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-pencil-square"></i> Add / Edit Client</h2>
+    <button id="add-client-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <form id="client-form" class="d-flex flex-column gap-3 p-3">
+    <div class="mb-3">
+      <label class="form-label">Client Name</label>
+      <input type="text" id="client-name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Phone</label>
+      <input type="text" id="client-phone" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">WhatsApp</label>
+      <input type="text" id="client-whatsapp" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Address</label>
+      <input type="text" id="client-address" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Fidelity Points</label>
+      <input type="number" id="client-points" class="form-control" value="0">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Chiffre d'Affaire (MAD)</label>
+      <input type="number" step="0.01" id="client-ca" class="form-control" value="0">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Profit (MAD)</label>
+      <input type="number" step="0.01" id="client-profit" class="form-control" value="0">
+    </div>
+    <div class="text-center">
+      <button type="submit" class="btn btn-success px-4"><i class="bi bi-save"></i> Save Client</button>
+    </div>
+  </form>
+</div>
+
+<!-- ADD / EDIT SUPPLIER -->
+<div id="add-supplier-form" class="add-product-overlay d-none">
+  <div class="form-header d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-pencil-square"></i> Add / Edit Supplier</h2>
+    <button id="add-supplier-close" class="btn btn-outline-danger">×</button>
+  </div>
+
+  <form id="supplier-form" class="d-flex flex-column gap-3 p-3">
+    <div class="mb-3">
+      <label class="form-label">Supplier Name</label>
+      <input type="text" id="supplier-name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Phone</label>
+      <input type="text" id="supplier-phone" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">WhatsApp</label>
+      <input type="text" id="supplier-whatsapp" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Address</label>
+      <input type="text" id="supplier-address" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Chiffre d'Affaire (MAD)</label>
+      <input type="number" step="0.01" id="supplier-ca" class="form-control" value="0">
+    </div>
+    <div class="text-center">
+      <button type="submit" class="btn btn-success px-4"><i class="bi bi-save"></i> Save Supplier</button>
+    </div>
+  </form>
+</div>
+
+<script src="db.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
